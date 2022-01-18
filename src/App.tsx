@@ -19,8 +19,16 @@ const App: React.FC = () => {
       return;
     }
 
-    space = new Space(gl, canvas.current!.width, canvas.current!.height);
-    const minDimension = Math.min(space.screenWidth, space.screenHeight);
+    const minDimension = Math.min(
+      canvas.current!.width,
+      canvas.current!.height
+    );
+    space = new Space(
+      gl,
+      canvas.current!.width,
+      canvas.current!.height,
+      Math.floor(minDimension / 40)
+    );
 
     for (let i = 0; i < 10; i++) {
       const radius = Math.random() * (minDimension / 12) + minDimension / 24;

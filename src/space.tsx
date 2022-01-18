@@ -104,8 +104,13 @@ const fragmentSource = `#version 300 es
 export default class Space {
   screenWidth: number;
   screenHeight: number;
+  gridWidth: number;
+  gridHeight: number;
+  isoLevel: number;
 
   VAO: WebGLVertexArrayObject;
+  texture: WebGLTexture;
+  data: Float32Array;
   shader: Shader;
 
   metaballs: {
@@ -124,7 +129,8 @@ export default class Space {
   constructor(
     gl: WebGL2RenderingContext,
     screenWidth: number,
-    screenHeight: number
+    screenHeight: number,
+    gridSpacing: number
   ) {
     this.screenWidth = screenWidth;
     this.screenHeight = screenHeight;
@@ -138,6 +144,33 @@ export default class Space {
     this.clickX = 0;
     this.clickY = 0;
     this.draggedMetaballIndex = -1;
+
+    this.gridWidth = Math.floor(this.screenWidth / gridSpacing) + 1;
+    this.gridHeight = Math.floor(this.screenHeight / gridSpacing) + 1;
+
+    this.isoLevel = 1;
+
+    this.data = new Float32Array(this.gridWidth * this.gridHeight);
+
+    this.texture = gl.createTexture()!;
+    gl.activeTexture(gl.TEXTURE0 + 0);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R32F,
+      this.gridWidth,
+      this.gridHeight,
+      0,
+      gl.RED,
+      gl.FLOAT,
+      this.data
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
   onClick(x: number, y: number) {
@@ -230,19 +263,9 @@ export default class Space {
   }
 
   draw(gl: WebGL2RenderingContext, gridSpacing: number, radius: number) {
-    const isoLevel = 1;
-
     // Write metaball data to texture
-    const texture = gl.createTexture()!;
-    gl.activeTexture(gl.TEXTURE0 + 0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-
-    const gridWidth = Math.floor(this.screenWidth / gridSpacing) + 1;
-    const gridHeight = Math.floor(this.screenHeight / gridSpacing) + 1;
-
-    const data = new Float32Array(gridWidth * gridHeight);
-    for (let x = 0; x < gridWidth; x++) {
-      for (let y = 0; y < gridHeight; y++) {
+    for (let x = 0; x < this.gridWidth; x++) {
+      for (let y = 0; y < this.gridHeight; y++) {
         const xpos = x * gridSpacing;
         const ypos = y * gridSpacing;
         let sum = 0;
@@ -263,26 +286,21 @@ export default class Space {
           }
         }
 
-        data[y * gridWidth + x] = sum;
+        this.data[y * this.gridWidth + x] = sum;
       }
     }
 
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
       gl.R32F,
-      gridWidth,
-      gridHeight,
+      this.gridWidth,
+      this.gridHeight,
       0,
       gl.RED,
       gl.FLOAT,
-      data
+      this.data
     );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     // Draw
     gl.bindVertexArray(this.VAO);
@@ -290,19 +308,21 @@ export default class Space {
 
     gl.uniform1i(
       gl.getUniformLocation(this.shader.program, 'gridWidth'),
-      gridWidth
+      this.gridWidth
     );
     gl.uniform1i(
       gl.getUniformLocation(this.shader.program, 'gridHeight'),
-      gridHeight
+      this.gridHeight
     );
     gl.uniform1f(
       gl.getUniformLocation(this.shader.program, 'isoLevel'),
-      isoLevel
+      this.isoLevel
     );
 
-    gl.drawArrays(gl.LINES, 0, 4 * (gridWidth - 1) * (gridHeight - 1));
-
-    gl.deleteTexture(texture);
+    gl.drawArrays(
+      gl.LINES,
+      0,
+      4 * (this.gridWidth - 1) * (this.gridHeight - 1)
+    );
   }
 }
