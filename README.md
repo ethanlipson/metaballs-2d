@@ -1,6 +1,6 @@
-# Getting Started with Create React App
+# 2D Metaballs
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app). Try it out on [my website](https://ethanlipson.com/metaballs-2d)! Click/touch and drag to move the metaballs around.
 
 ## Available Scripts
 
